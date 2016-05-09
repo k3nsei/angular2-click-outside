@@ -2,5 +2,5 @@
 
 ### Usage:
 `
-  <div click-outside (clicked)="clickedOutside($event)"></div>
+  <div click-outside (clickOutside)="onClickOutside($event)"></div>
 `
