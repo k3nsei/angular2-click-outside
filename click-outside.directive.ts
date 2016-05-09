@@ -1,32 +1,57 @@
-import {Directive, Output, EventEmitter, ElementRef} from 'angular2/core';
+import {Directive, OnInit, OnDestroy, Output, EventEmitter, HostListener} from '@angular/core';
 import {Observable} from 'rxjs/Observable';
-import * as helpers from './utils/helpers';
+import 'rxjs/add/observable/fromEvent';
+import 'rxjs/add/operator/delay';
+import 'rxjs/add/operator/do';
 
 @Directive({
-  selector: '[click-outside]',
-  host: {
-    '(document:click)': 'onClick($event)'
-  }
+  selector: '[click-outside]'
 })
 
-export class ClickOutside {
-  private listening:boolean = false;
+export class ClickOutside implements OnInit, OnDestroy {
+  private listening:boolean;
+  private globalClick:Observable<MouseEvent>;
 
-  @Output('clicked') clicked:EventEmitter<boolean> = new EventEmitter();
+  @Output('clickOutside') clickOutside:EventEmitter<Object>; 
 
-  constructor(private _elRef:ElementRef) {
-    Observable.of(null).delay(1).do(() => {
-      this.listening = true;
-    }).toPromise();
+  constructor() {
+    this.listening = false;
+    this.clickOutside = new EventEmitter();
   }
 
-  onClick(event:MouseEvent) {
-    if (this.listening && event instanceof MouseEvent) {
-      if (helpers.isDescendant(this._elRef.nativeElement, event.target) === true) {
-        this.clicked.emit(false);
-      } else {
-        this.clicked.emit(true);
-      }
+  ngOnInit() {
+    this.globalClick = Observable
+      .fromEvent(document, 'click')
+      .delay(1)
+      .do(() => {
+        this.listening = true;
+      }).subscribe((event:MouseEvent) => {
+        this.onGlobalClick(event);
+      });
+  }
+  
+  ngOnDestroy() {
+    this.globalClick.unsubscribe();
+  }
+
+  onGlobalClick(event:MouseEvent) {
+    if (event instanceof MouseEvent && this.listening === true) {
+      this.clickOutside.emit({
+        target: (event.target || null),
+        value: true
+      });
+    }
+  }
+  
+  @HostListener('click', ['$event'])
+  onHostClick(event:MouseEvent) {
+    if (event instanceof MouseEvent) {
+      event.stopPropagation();
+
+      this.clickOutside.emit({
+        target: (event.target || null),
+        value: false
+      });
     }
   }
 }
