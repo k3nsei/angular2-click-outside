@@ -1,4 +1,4 @@
-import {Directive, OnInit, OnDestroy, Output, EventEmitter, HostListener} from '@angular/core';
+import {Directive, OnInit, OnDestroy, Output, EventEmitter, ElementRef} from '@angular/core';
 import {Observable} from 'rxjs/Observable';
 import 'rxjs/add/observable/fromEvent';
 import 'rxjs/add/operator/delay';
@@ -14,7 +14,7 @@ export class ClickOutside implements OnInit, OnDestroy {
 
   @Output('clickOutside') clickOutside:EventEmitter<Object>; 
 
-  constructor() {
+  constructor(private _elRef:ElementRef) {
     this.listening = false;
     this.clickOutside = new EventEmitter();
   }
@@ -36,22 +36,29 @@ export class ClickOutside implements OnInit, OnDestroy {
 
   onGlobalClick(event:MouseEvent) {
     if (event instanceof MouseEvent && this.listening === true) {
-      this.clickOutside.emit({
-        target: (event.target || null),
-        value: true
-      });
+      if(this.isDescendant(this._elRef.nativeElement, event.target) === true) {
+        this.clickOutside.emit({
+          target: (event.target || null),
+          value: false
+        });
+      } else {
+        this.clickOutside.emit({
+          target: (event.target || null),
+          value: true
+        });
+      }
     }
   }
-  
-  @HostListener('click', ['$event'])
-  onHostClick(event:MouseEvent) {
-    if (event instanceof MouseEvent) {
-      event.stopPropagation();
 
-      this.clickOutside.emit({
-        target: (event.target || null),
-        value: false
-      });
+  isDescendant(parent, child) {
+    let node = child;
+    while (node !== null) {
+      if (node === parent) {
+        return true;
+      } else {
+        node = node.parentNode;
+      }
     }
+    return false;
   }
 }
